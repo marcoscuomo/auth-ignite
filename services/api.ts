@@ -1,12 +1,16 @@
 import axios, { Axios, AxiosError } from 'axios';
 import { parseCookies, setCookie } from 'nookies';
+import { signOut } from '../context/AuthContext';
 
 let cookies = parseCookies();
 
 /** Será utilizada para criar uma fila de requisições, quando estiver atualizado 
  *   token no RefreshToken as demais requisições vão parar
  * **/
-let isRefreshing = false; 
+let isRefreshing = false;
+
+/** Vai armazenas as requisições que estarão aguardando o processo de refresh token **/
+let failedRequestsQueue: any = [];
 
 export const api = axios.create({
   baseURL: 'http://localhost:3333',
@@ -29,18 +33,19 @@ api.interceptors.response.use(response => {
   return response;
 
 }, (error) => {
-  
   if(error.response?.status === 401) {
+    
     if(error.response.data?.code === 'token.expired') {
+      
       /** Renovar o token **/
       cookies = parseCookies();
 
       const { 'nextauth.refreshToken': refreshToken } = cookies;
-
+      
+      /** Toda a configuração de requisição feita a api **/
+      const originalConfig = error.config;
+      
       if(!isRefreshing){
-
-        isRefreshing = true;
-
         
         api.post('/refresh', {
           refreshToken,
@@ -58,13 +63,39 @@ api.interceptors.response.use(response => {
           });
   
           api.defaults.headers!['Authorization'] = `Bearer ${token}`;
+
+          /** Executa as requisições que estão aguardando **/
+          failedRequestsQueue.forEach((request: any) => request.onSuccess(token));
+          failedRequestsQueue = [];
   
+        }).catch(err => {
+          failedRequestsQueue.forEach((request: any) => request.onFailure(err));
+          failedRequestsQueue = [];
+        }).finally(() => {
+          isRefreshing = false;
+        })
+
+        //Tratar a fila das requisições que vão aguardar o refresh do token
+        return new Promise((resolve, reject) => {
+          failedRequestsQueue.push({
+            onSuccess: (token: string) => {
+              originalConfig.headers['Authorization'] = `Bearer ${token}`
+
+              resolve(api(originalConfig))
+            },
+            onFailure: (err: AxiosError) => {
+              reject(err);
+            }
+          })
         })
       }
 
     } else {
       //Deslogar usuario
+      signOut();
     }
   }
+
+  return Promise.reject(error);
   
-})
+});

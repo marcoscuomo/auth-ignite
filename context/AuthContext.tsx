@@ -1,7 +1,7 @@
 import { createContext, ReactNode, useEffect, useState } from "react";
 import { api } from "../services/api";
-import { useRouter } from 'next/router';
-import { setCookie, parseCookies } from 'nookies';
+import Router from 'next/router';
+import { setCookie, parseCookies, destroyCookie } from 'nookies';
 
 type User = {
   email: string;
@@ -26,10 +26,16 @@ type AuthProviderProps = {
 
 export const AuthContext = createContext({} as AuthContextData);
 
+export function signOut() {
+  destroyCookie(undefined, 'nextauth.token')
+  destroyCookie(undefined, 'nextauth.refreshToken')
+
+  Router.push('/');
+}
+
 export function AuthProvider({ children }: AuthProviderProps) {
 
   const [user, setUser] = useState<User>();
-  const router = useRouter();
 
   /**
    * UseEffect para carregar o acessos e permissões do usuário toda vez que o usuário entrar na aplicação
@@ -42,10 +48,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const { 'nextauth.token': token } = parseCookies();
 
     if(token) {
-      api.get('/me').then(response => {
-        const { email, permissions, roles } = response.data;
+      api.get('/me')
+      .then(response => {
+        const { email, permissions, roles } = response?.data;
 
         setUser({ email, permissions, roles });
+      })
+      /** Caso ocorra um erro na autenticação que não seja um token expirado, nesse caso vamos deslogar o usuario **/
+      .catch(() => {
+        signOut();
       })
     }
   },[]);
@@ -79,7 +90,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       api.defaults.headers!['Authorization'] = `Bearer ${token}`;
 
-      router.push('/dashboard');
+      Router.push('/dashboard');
     } catch(err) {
       
     }
