@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useState } from "react";
+import { createContext, ReactNode, useEffect, useState } from "react";
 import { api } from "../services/api";
 import { useRouter } from 'next/router';
 import { setCookie, parseCookies } from 'nookies';
@@ -36,7 +36,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
    * 
    * **/
 
-  
+  useEffect(() => {
+    
+    //Irá retornar todos os cookies, vamos desestruturar para pegar o token da aplicação.s
+    const { 'nextauth.token': token } = parseCookies();
+
+    if(token) {
+      api.get('/me').then(response => {
+        const { email, permissions, roles } = response.data;
+
+        setUser({ email, permissions, roles });
+      })
+    }
+  },[]);
 
   const isAuthenticated = !!user;
 
@@ -64,6 +76,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         permissions,
         roles
       });
+
+      api.defaults.headers!['Authorization'] = `Bearer ${token}`;
 
       router.push('/dashboard');
     } catch(err) {
