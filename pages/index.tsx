@@ -1,11 +1,11 @@
-import type { NextPage } from 'next'
-import Head from 'next/head'
-import Image from 'next/image'
+import type { GetServerSideProps } from 'next'
 import { FormEvent, useContext, useState } from 'react'
+import { parseCookies } from 'nookies';
+
 import { AuthContext } from '../context/AuthContext'
 import styles from '../styles/Home.module.css'
 
-const Home: NextPage = () => {
+export default function Home() {
 
   const [email, setEmail] = useState('diego@rocketseat.team');
   const [password, setPassword] = useState('');
@@ -34,4 +34,24 @@ const Home: NextPage = () => {
   )
 }
 
-export default Home
+
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+
+  /** Acessar todos os cookies da aplicacao **/
+  // ctx.req.cookies
+  const cookies = parseCookies(ctx);
+
+  if(cookies['nextauth.token']) {
+    return {
+      redirect: {
+        destination: '/dashboard',
+        permanent: false
+      }
+    }
+  }
+
+  return {
+    props: {}
+  }
+
+}
