@@ -1,5 +1,6 @@
 import { GetServerSideProps, GetServerSidePropsContext, GetServerSidePropsResult } from "next";
-import { parseCookies } from "nookies";
+import { destroyCookie, parseCookies } from "nookies";
+import { AuthTokenError } from "../errors/AuthTokenError";
 
 export function withSSRAuth<P>(fn: GetServerSideProps<P>) {
   /** Função que só permitira o acesso de visitantes não autenticados **/
@@ -21,6 +22,21 @@ export function withSSRAuth<P>(fn: GetServerSideProps<P>) {
       }
     }
 
-    return await fn(ctx);
+    try {
+      // const response = await apiClient.get('/me');
+      return await fn(ctx);
+    } catch(err) {
+      if(err instanceof AuthTokenError) {
+        destroyCookie(ctx, 'nextauth.token');
+        destroyCookie(ctx, 'nextauth.refreshToken');
+    
+        return {
+          redirect: {
+            destination: '/',
+            permanent: false
+          }
+        }
+      }
+    }
   }
 }

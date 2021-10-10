@@ -1,6 +1,7 @@
 import axios, { Axios, AxiosError } from 'axios';
 import { parseCookies, setCookie } from 'nookies';
 import { signOut } from '../context/AuthContext';
+import { AuthTokenError } from '../errors/AuthTokenError';
 
 /** Será utilizada para criar uma fila de requisições, quando estiver atualizado 
  *   token no RefreshToken as demais requisições vão parar
@@ -108,9 +109,11 @@ export function setupAPIClient(ctx = undefined) {
   
       } else {
         //Deslogar usuario
-        console.log('else da api');
+        /** Verifica se o processo está sendo executado pelo navegador ou pelo server side **/
         if(process.browser) {
           signOut();
+        } else {
+          return Promise.reject(new AuthTokenError());
         }
       }
     }
