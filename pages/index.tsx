@@ -4,6 +4,7 @@ import { parseCookies } from 'nookies';
 
 import { AuthContext } from '../context/AuthContext'
 import styles from '../styles/Home.module.css'
+import { withSSRGuest } from '../utils/withSSRGuest';
 
 export default function Home() {
 
@@ -35,23 +36,24 @@ export default function Home() {
 }
 
 
-export const getServerSideProps: GetServerSideProps = async (ctx) => {
+export const getServerSideProps = withSSRGuest(async (ctx) => {
 
   /** Acessar todos os cookies da aplicacao **/
   // ctx.req.cookies
-  const cookies = parseCookies(ctx);
+  // const cookies = parseCookies(ctx);
 
-  if(cookies['nextauth.token']) {
-    return {
-      redirect: {
-        destination: '/dashboard',
-        permanent: false
-      }
-    }
-  }
+  /** Enviado para a função withSSRGuest **/
+  // if(cookies['nextauth.token']) {
+  //   return {
+  //     redirect: {
+  //       destination: '/dashboard',
+  //       permanent: false
+  //     }
+  //   }
+  // }
 
   return {
     props: {}
   }
 
-}
+});

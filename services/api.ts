@@ -45,7 +45,9 @@ api.interceptors.response.use(response => {
       /** Toda a configuração de requisição feita a api **/
       const originalConfig = error.config;
       
-      if(!isRefreshing){
+      if(!isRefreshing) {
+
+        isRefreshing = true;
         
         api.post('/refresh', {
           refreshToken,
@@ -92,6 +94,7 @@ api.interceptors.response.use(response => {
 
     } else {
       //Deslogar usuario
+      console.log('else da api');
       signOut();
     }
   }
